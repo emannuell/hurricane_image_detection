@@ -111,7 +111,16 @@ def remap(path, extent, resolution, x1, y1, x2, y2):
     grid.GetRasterBand(1).WriteArray(array)
  
     return grid
-    
+
+def simpleRemap(path):
+    nc = Dataset(path)
+    # Extract the Brightness Temperature values from the NetCDF
+    data = nc.variables['Rad'][:]
+    # print(data.shape)
+    # Mask fill values (i.e. invalid values)
+    # return np.ma.masked_where(data, data == -1, False)
+    return data
+
 def remap2(path, extent, resolution, x1, y1, x2, y2, targetPrj=''):
     targetPrj = osr.SpatialReference()
     targetPrj.ImportFromProj4('+proj=longlat +ellps=WGS84 +datum=WGS84 +no_defs')
@@ -124,17 +133,22 @@ def remap2(path, extent, resolution, x1, y1, x2, y2, targetPrj=''):
     # Read scale/offset from file
     scale, offset = getScaleOffsetRad(path) 
           
+    # with Dataset(path, 'r') as nc:
+    #     raw = nc.variables['Rad'][:]
+    # nc.close()
     try:  
         
         raw = gdal.Open('NETCDF:"'+path+'":Rad')
-        
+        # raw = nc.variables['Rad'][:]
+
     except:
+        print('caiu no except')
         connectionInfo = 'HDF5:\"' + path + r'\"://Rad'   
         # Open NetCDF file (GOES-16 data)  
         raw = gdal.Open(connectionInfo) 
                  
     # store the numpy array
-    raw2 = raw.ReadAsArray()
+    # raw = raw.ReadAsArray()
     
     # Setup projection and geo-transformation
     raw.SetProjection(sourcePrj.ExportToWkt())

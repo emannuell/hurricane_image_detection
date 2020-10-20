@@ -6,10 +6,14 @@ import matplotlib.pyplot as plt           # Import the Matplotlib package
 import numpy as np                        # Import the Numpy package
 from netCDF4 import Dataset               # Import the NetCDF Python interface
 from remap import remap2                   # Import the Remap function
+from remap import simpleRemap
 import pyresample as pr
 from skimage.exposure import rescale_intensity
+import cv2
 
 resolution = 2
+plt.figure(figsize=(1,1), dpi=500)
+Wavelenghts = ['[]','[0.47 μm]','[0.64 μm]','[0.865 μm]','[1.378 μm]','[1.61 μm]','[2.25 μm]','[3.90 μm]','[6.19 μm]','[6.95 μm]','[7.34 μm]','[8.50 μm]','[9.61 μm]','[10.35 μm]','[11.20 μm]','[12.30 μm]','[13.30 μm]']
 
 def buildGrid(nc):
     # lon_0 = nc.variables['nominal_satellite_subpoint_lon'][0]
@@ -36,75 +40,53 @@ def buildGrid(nc):
     y1 = nc.variables['y_image_bounds'][1] * H
     y2 = nc.variables['y_image_bounds'][0] * H
     return extents, x1, y1, x2, y2
-
-# MSG 24-hour cloud microphysics RGB
-# def MSG24HrMicrophysicsRGB(b9T, b7T, b10T):
-#     # red = band10 - band9; -4K to 2K rescalled to 0 to 255
-#     # grn = band9 - band7; 0K to 6K rescalled to 0 to 255; gamma 1.2
-#     # blu = band9; 248K to 303K rescalled to 0 to 255
-#     red = rescale(b10T-b9T, -4, 2, 0, 255)
-#     grn = 255*(rescale(b9T-b7T, 0, 6, 0, 1)**0.8333)
-#     blu = rescale(b9T, 248, 303, 0, 255)
-#     return [red, grn, blu]
-
-# combine 3 images as an RGB image
-# def combineRGB(red, green, blue):
-#     red = GridUtil.setParamType(red, makeRealType("redimage"), 0)
-#     green = GridUtil.setParamType(green, makeRealType("greenimage"), 0)
-#     blue = GridUtil.setParamType(blue, makeRealType("blueimage"), 0)
-#     return DerivedGridFactory.combineGrids((red,green,blue),1)
-
+plt.clf()
+plt.close()
 # 1 - File to read
-# ncPath = "/media/emannuell/hd2/mayday/output/C15/OR_ABI-L1b-RadF-M3C15_G16_s20172591800380_e20172591811153_c20172591811214.nc"
-ncPath = "/media/emannuell/hd2/mayday/output/C07/OR_ABI-L1b-RadF-M3C07_G16_s20172591800380_e20172591811158_c20172591811193.nc"
+ncPath = "/media/emannuell/hd2/mayday/output/dataset/CMI/C15/OR_ABI-L2-CMIPF-M6C15_G16_s20202280600204_e20202280609518_c20202280610007.nc"
+# ncPath = "/media/emannuell/hd2/mayday/output/C07/OR_ABI-L1b-RadF-M3C07_G16_s20172591800380_e20172591811158_c20172591811193.nc"
 # Read the file using the NetCDF library
 ncFile = Dataset(ncPath)
 # Remap and get the brightness temperatures
 extent, x1, y1, x2, y2 = buildGrid(ncFile)
+data1 = ncFile.variables['CMI'][:] - 273.15
 ncFile.close()
-grid = remap2(ncPath, extent, resolution, x1, y1, x2, y2)
-# Convert to Celsius
-data1 = grid.ReadAsArray() - 273.15
+# grid = remap2(ncPath, extent, resolution, x1, y1, x2, y2)
+gamma1 = np.sqrt(data1) - 273.15
+# plt.imsave('gamma1.jpg', gamma1)
+# data1 = np.subtract(grid, 273.15)
 
 # 2 - File to read
-# ncPath = "/media/emannuell/hd2/mayday/output/C13/OR_ABI-L1b-RadF-M3C13_G16_s20172591800380_e20172591811158_c20172591811213.nc"
-ncPath = "/media/emannuell/hd2/mayday/output/C09/OR_ABI-L1b-RadF-M3C09_G16_s20172591800380_e20172591811153_c20172591811215.nc"
+ncPath = "/media/emannuell/hd2/mayday/output/dataset/CMI/C13/OR_ABI-L2-CMIPF-M6C13_G16_s20202280600204_e20202280609524_c20202280610006.nc"
+# ncPath = "/media/emannuell/hd2/mayday/output/C09/OR_ABI-L1b-RadF-M3C09_G16_s20172591800380_e20172591811153_c20172591811215.nc"
 # Read the file using the NetCDF library
 ncFile = Dataset(ncPath)
-# Remap and get the brightness temperatures
-extent, x1, y1, x2, y2 = buildGrid(ncFile)
+data2 = ncFile.variables['CMI'][:] - 273.15
 ncFile.close()
-grid = remap2(ncPath, extent, resolution, x1, y1, x2, y2)
+# grid = remap2(ncPath, extent, resolution, x1, y1, x2, y2)
+gamma2 = np.sqrt(data2) - 273.15
+# plt.imsave('gamma2.jpg', gamma2)
 # Convert to Celsius
-data2 = grid.ReadAsArray() - 273.15
+# data2 = grid.ReadAsArray() - 273.15
  
 # File to read
-# ncPath = "/media/emannuell/hd2/mayday/output/C11/OR_ABI-L1b-RadF-M3C11_G16_s20172591800380_e20172591811147_c20172591811206.nc"
-ncPath = "/media/emannuell/hd2/mayday/output/C10/OR_ABI-L1b-RadF-M3C10_G16_s20172591800380_e20172591811158_c20172591811210.nc"
+ncPath = "/media/emannuell/hd2/mayday/output/dataset/CMI/C11/OR_ABI-L2-CMIPF-M6C11_G16_s20202280600204_e20202280609512_c20202280609596.nc"
+# ncPath = "/media/emannuell/hd2/mayday/output/C10/OR_ABI-L1b-RadF-M3C10_G16_s20172591800380_e20172591811158_c20172591811210.nc"
 # Read the file using the NetCDF library
 ncFile = Dataset(ncPath)
-# Remap and get the brightness temperatures
-extent, x1, y1, x2, y2 = buildGrid(ncFile)
+data3 = ncFile.variables['CMI'][:] - 273.15
 ncFile.close()
-grid = remap2(ncPath, extent, resolution, x1, y1, x2, y2)
+# grid = remap2(ncPath, extent, resolution, x1, y1, x2, y2)
+gamma3 = np.sqrt(data3) - 273.15
+# plt.imsave('gamma3.jpg', gamma3)
+# data3 = np.subtract(grid, 273.15)
 # Convert to Celsius
-data3 = grid.ReadAsArray() - 273.15
+# data3 = grid.ReadAsArray() - 273.15
 
 
 # RGB = MSG24HrMicrophysicsRGB(data1, data2, data3)
 # RGB = np.stack([RGB], axis=2)
 # plt.imsave('MSG24HrMicrophysicsRGB.png', RGB)
-
-# Define the size of the saved picture=================================================================
-plt.figure(figsize=(10,6))
-DPI = 150
-# print('Image size:', data1.shape[1]/float(DPI), data1.shape[0]/float(DPI))
-# fig = plt.figure(figsize=(data1.shape[1]/float(DPI), data1.shape[0]/float(DPI)), frameon=False, dpi=DPI)
-# ax = plt.Axes(fig, [0., 0., 1., 1.])
-# ax.set_axis_off()
-# fig.add_axes(ax)
-# ax = plt.axis('off')
-# ====================================================================================================
  
 # RGB Components
 R = data1 - data2
@@ -115,20 +97,34 @@ B = data2
 # G = data2 - data1
 # B = data2
 
-# R = rescale_intensity(R, in_range=(0, 255))
-# G = rescale_intensity(G, in_range=(0, 255)) ** 0.8333
-# B = rescale_intensity(B, in_range=(0, 255))
+# R = gamma1 - gamma2
+# G = gamma2 - gamma3
+# B = gamma2
+
+# R = gamma3 - gamma2
+# G = gamma2 - gamma1
+# B = gamma2
+
 
 # Minimuns and Maximuns
-Rmin = np.matrix(R).min()
-Rmax = np.matrix(R).max()
+# Rmin = np.matrix(R).min()
+# Rmax = np.matrix(R).max()
+
+# Gmin = np.matrix(G).min()
+# Gmax = np.matrix(G).max()
+
+# Bmin = np.matrix(B).min()
+# Bmax = np.matrix(B).max()
+
+Rmin = -4.0
+Rmax = 2.0
  
-Gmin = np.matrix(G).min()
-Gmax = np.matrix(G).max()
+Gmin = 0.0
+Gmax = 6.0
  
-Bmin = np.matrix(B).min()
-Bmax = np.matrix(B).max()
- 
+Bmin = -25.10
+Bmax = 29.8
+
 # Choose the gamma
 gamma_R = 1
 gamma_G = 1.2
@@ -140,8 +136,18 @@ G = ((G - Gmin) / (Gmax - Gmin)) ** (1/gamma_G)
 B = ((B - Bmin) / (Bmax - Bmin)) ** (1/gamma_B)
  
 # Create the RGB
-RGB = np.stack([B, G, R], axis=2)
+RGB = np.stack([R, G, B], axis=2)
 plt.imsave('RGB_24h_Microphysics-2.png', RGB)
+
+
+# R = rescale_intensity(R, in_range=(0, 255))
+# G = rescale_intensity(G, in_range=(0, 255))
+# B = rescale_intensity(B, in_range=(0, 255))
+# cv2.imwrite('opencv.jpg', RGB)
+# plt.clf()
+# plt.close()
+
+
 # # ====================================================================================================
 # # Create the basemap
 # bmap = Basemap(llcrnrlon=extent[0], llcrnrlat=extent[1], urcrnrlon=extent[2], urcrnrlat=extent[3], epsg=4326, resolution = 'i')
